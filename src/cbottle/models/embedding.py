@@ -70,7 +70,7 @@ class FrequencyEmbedding(torch.nn.Module):
         )
 
     def forward(self, x):
-        freqs = self.freqs[None, :, None, None]
+        freqs = self.freqs.to(x.device, dtype=x.dtype)[None, :, None, None]
         x = x[:, None, :, :]
         x = x * (2 * math.pi * freqs).to(x.dtype)
         x = torch.cat([x.cos(), x.sin()], dim=1)

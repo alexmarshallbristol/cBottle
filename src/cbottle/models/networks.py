@@ -1365,7 +1365,9 @@ class SongUNet(torch.nn.Module):
     def _get_arg(self, x, day_of_year, second_of_day):
         inputs = [x]
         if self.embed_calendar:
-            inputs.append(self.embed_calendar(day_of_year, second_of_day))
+            calendar_embed = self.embed_calendar(day_of_year, second_of_day)
+            calendar_embed = calendar_embed.to(x.device, dtype=x.dtype)
+            inputs.append(calendar_embed)
 
         inputs = [inp.to(x.dtype) if inp.dtype != x.dtype else inp for inp in inputs]
         mf = (
