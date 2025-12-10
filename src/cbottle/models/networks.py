@@ -1116,12 +1116,18 @@ class SongUNet(torch.nn.Module):
             block_kwargs.update(channels_per_head=channels_per_head)
 
         if calendar_embed_channels:
-            # needs healpix
-            self.embed_calendar = CalendarEmbedding(
-                torch.from_numpy(self.grid.lon).float(),
-                calendar_embed_channels,
-                include_legacy_bug=calendar_include_legacy_bug,
-            )
+            if mixing_type == "healpix":
+                self.embed_calendar = CalendarEmbedding(
+                    torch.from_numpy(self.grid.lon).float(),
+                    calendar_embed_channels,
+                    include_legacy_bug=calendar_include_legacy_bug,
+                )
+            else:
+                self.embed_calendar = CalendarEmbedding( 
+                    torch.ones(self.domain.numel()), # null tensor for lon, not needed
+                    calendar_embed_channels,
+                    include_legacy_bug=calendar_include_legacy_bug,
+                )
             in_channels += self.embed_calendar.out_channels
         else:
             self.embed_calendar = None
@@ -1359,7 +1365,9 @@ class SongUNet(torch.nn.Module):
     def _get_arg(self, x, day_of_year, second_of_day):
         inputs = [x]
         if self.embed_calendar:
-            inputs.append(self.embed_calendar(day_of_year, second_of_day))
+            calendar_embed = self.embed_calendar(day_of_year, second_of_day)
+            calendar_embed = calendar_embed.to(x.device, dtype=x.dtype)
+            inputs.append(calendar_embed)
 
         inputs = [inp.to(x.dtype) if inp.dtype != x.dtype else inp for inp in inputs]
         mf = (
